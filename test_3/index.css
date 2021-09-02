@@ -1,0 +1,59 @@
+body {
+  min-height: 100vh;
+  display: flex;
+}
+
+.grovalNavigation{
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  flex: 0.5;
+  text-align: center;
+  background-color: #888;
+  color: white;
+}
+.localNavigation{
+  flex: 0.5;
+  text-align: center;
+  background-color: #888;
+  color: #fff;
+}
+.content{
+  position: relative;/*相対配置*/
+  flex: 2;
+  text-align: center;
+  background-color: white;
+}
+
+div.map {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  width: 80%;
+  height: 70%;
+  background-color:#afeeee;
+}
+
+div.map div.allnum{
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  -ms-transform: translate(-50%,-50%);
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  /*以下装飾*/
+  margin:0;/*余計な隙間を除く*/
+  font-size: 15px;/*文字サイズ*/
+  border: solid #000000 2px; /*線で囲う*/
+  text-align:center;
+  padding: 0 0 0 0;/*文字と線の間の余白*/
+  color: #000000;/*文字色*/
+  text-decoration: none;/*下線を表示させない*/
+  font-weight: bold;
+  width: 120px;
+  height: 50px;
+  background-color:#ff000000;
+}

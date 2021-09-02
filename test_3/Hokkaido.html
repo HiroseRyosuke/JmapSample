@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>コロナ</title>
+    <script>
+      var result = []; // 最終的な二次元配列を入れるための配列
+      //CSVファイルを読み込む関数getCSV()の定義
+      function getCSV() {
+        var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
+        req.open("get", "nhk_news_covid19_prefectures_daily_data.csv", true); // アクセスするファイルを指定
+        req.send(null); // HTTPリクエストの発行
+
+        // レスポンスが返ってきたらconvertCSVtoArray()を呼ぶ	
+        req.onload = function () {
+          convertCSVtoArray(req.responseText); // 渡されるのは読み込んだCSVデータ
+        }
+      }
+
+      // 読み込んだCSVデータを二次元配列に変換する関数convertCSVtoArray()の定義
+      function convertCSVtoArray(str) { // 読み込んだCSVデータが文字列として渡される
+        // var result = []; // 最終的な二次元配列を入れるための配列
+        var tmp = str.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
+        var array = [];
+
+        // 北海道のデータを抽出
+        for (elements of tmp) {
+          if (elements.match('北海道')) {
+            array.push(elements);
+          }
+        }
+
+        // 各行ごとにカンマで区切った文字列を要素とした二次元配列を生成
+        for (var i = 0; i < array.length; ++i) {
+          result[i] = array[i].split(',');
+        }
+
+        // alert(result[0][1]); // 300yen
+        // console.table(result);
+      }
+
+      getCSV(); //最初に実行される
+    </script>
+    <style>
+      /* 配置の基準となるラッパーブロック; とりあえず背景色もここで設定している */
+      .scrollableChartWrapper {
+        position: relative;
+        background-color: ghostwhite;
+      }
+
+      /* スクロール可能グラフを囲む div */
+      .scrollableChartWrapper>div {
+        position: relative;
+        overflow-x: scroll;
+      }
+
+      /* Y軸イメージコピー用 canvas */
+      .scrollableChartWrapper>canvas {
+        position: absolute;
+        /* これにより、上の div と重なる位置に canvas が配置される */
+        left: 0;
+        top: 0;
+        background-color: ghostwhite;
+        /* ここをコメントアウトすると、背景色が透明になるので、Y軸を透かしてグラフ部分が見えるようになる */
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>北海道コロナ</h1>
+    <!-- 以下 HTML 部分 -->
+    <!-- スクロール可能グラフ領域のラッパーブロック -->
+    <div class="scrollableChartWrapper">
+      <!-- スクロールされる canvas を持つ div:
+       - style.width を省略すると div の幅がページ幅に合わせられる;
+       - style.width を指定すると div の幅（≒スクロールバーの長さ）が固定される -->
+      <div>
+        <!-- グラフ描画用 canvas:
+         - style.height は必須;
+         - style.width は全データを表示するのに必要なグラフ幅であり、JS によって設定する;
+         - width,height は Chart により設定される -->
+        <canvas id="chart" style="height: 250px"></canvas>
+      </div>
+      <!-- Y軸イメージコピー用 canvas: {style.,}{height,width} は JS によって設定する -->
+      <canvas id="yAxis" width="0"></canvas>
+    </div>
+
+    <!-- 以下 JavaScript 部分 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
+
+    <script>
+
+      // Y軸コピー用 canvas
+      var cvsYAxis = document.getElementById('yAxis');
+      var ctxYAxis = cvsYAxis.getContext('2d');
+
+      // テスト用データの用意
+      // 付け足したーーーーーーーーーーーーーーーーーーーーーーーーー
+      var labelsArray = [];
+      var coronaData = [];
+      for (var i = 0; i < result.length; i++) {
+        labelsArray.push(result[i][0]);
+        coronaData.push(result[i][3]);
+      }
+
+      var ctx = document.getElementById('ex_chart');
+      var data = {
+        labels: labelsArray,
+        datasets: [{
+          label: 'コロナ感染者推移',
+          data: coronaData,
+          borderColor: 'rgba(255, 100, 100, 1)',
+          lineTension: 0,
+          fill: false,
+          borderWidth: 1
+        }]
+      };
+
+      // X軸の1データ当たりの幅
+      var xAxisStepSize = 30;
+      // グラフ全体の幅を計算
+      // var chartWidth = data.length * xAxisStepSize;
+      var chartWidth = 9000;
+
+      // グラフ描画用 canvas
+      var cvsChart = document.getElementById('chart');
+      var ctxChart = cvsChart.getContext('2d');
+
+      // グラフ描画用canvasのstyle.width(すなわち全データを描画するのに必要なサイズ)に上記の幅を設定
+      cvsChart.style.width = chartWidth + "px";
+
+      // canvas.width(height)はグラフ描画時に Chart により変更される(らしい)ので、下記は不要
+      //cvsChart.width = chartWidth;
+      //cvsChart.height = chartHeight;
+
+      console.log("Before chart canvas width=" + cvsChart.style.width);
+      console.log("Before chart canvas height=" + cvsChart.style.height);
+
+      // 二重実行防止用フラグ
+      var copyYAxisCalled = false;
+
+      // Y軸イメージのコピー関数
+      function copyYAxisImage(chart) {
+        //console.log("copyYAxisCalled="+copyYAxisCalled);
+
+        if (copyYAxisCalled) return;
+
+        copyYAxisCalled = true;
+
+        // グラフ描画後は、canvas.width(height):canvas.style.width(height) 比は、下記 scale の値になっている
+        var scale = window.devicePixelRatio;
+
+        // Y軸のスケール情報
+        var yAxScale = chart.scales['y-axis-0'];
+
+        // Y軸部分としてグラフからコピーすべき幅 (TODO: 良く分かっていない)
+        var yAxisStyleWidth0 = yAxScale.width - 10;
+
+        // canvas におけるコピー幅(yAxisStyleWidth0を直接使うと微妙にずれるので、整数値に切り上げる)
+        var copyWidth = Math.ceil(yAxisStyleWidth0 * scale);
+        // Y軸canvas の幅(右側に少し空白部を残す)
+        var yAxisCvsWidth = copyWidth + 4;
+        // 実際の描画幅(styleに設定する)
+        var yAxisStyleWidth = yAxisCvsWidth / scale;
+
+        // Y軸部分としてグラフからコピーすべき高さ (TODO: 良く分かっていない) ⇒これを実際の描画高とする(styleに設定)
+        var yAxisStyleHeight = yAxScale.height + yAxScale.top + 10;
+        // canvas におけるコピー高
+        var copyHeight = yAxisStyleHeight * scale;
+        // Y軸canvas の高さ
+        var yAxisCvsHeight = copyHeight;
+
+        console.log("After chart canvas width=" + cvsChart.width);
+        console.log("After chart canvas height=" + cvsChart.height);
+        console.log("scale=" + scale);
+        console.log("copyWidth=" + copyWidth);
+        console.log("copyHeight=" + copyHeight);
+        console.log("yAxisCvsWidth=" + yAxisCvsWidth);
+        console.log("yAxisCvsHeight=" + yAxisCvsHeight);
+        console.log("yAxisStyleWidth0=" + yAxisStyleWidth0);
+        console.log("yAxisStyleWidth=" + yAxisStyleWidth);
+        console.log("yAxisStyleHeight=" + yAxisStyleHeight);
+
+        // 下記はやってもやらなくても結果が変わらないっぽい
+        //ctxYAxis.scale(scale, scale);
+
+        // Y軸canvas の幅と高さを設定
+        cvsYAxis.width = yAxisCvsWidth;
+        cvsYAxis.height = yAxisCvsHeight;
+
+        // Y軸canvas.style(実際に描画される大きさ)の幅と高さを設定
+        cvsYAxis.style.width = yAxisStyleWidth + "px";
+        cvsYAxis.style.height = yAxisStyleHeight + "px";
+
+        // グラフcanvasからY軸部分のイメージをコピーする
+        ctxYAxis.drawImage(cvsChart, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+
+        // 軸ラベルのフォント色を透明に変更して、以降、再表示されても見えないようにする
+        chart.options.scales.yAxes[0].ticks.fontColor = 'rgba(0,0,0,0)';
+        chart.update();
+        // 最初に描画されたグラフのY軸ラベル部分をクリアする
+        ctxChart.clearRect(0, 0, yAxisStyleWidth, yAxisStyleHeight);
+      }
+
+      // グラフ描画
+      var myChart = new Chart(ctxChart, {
+        type: 'line',
+        data: data,
+        options: {
+          responsive: false,  // true（デフォルト）にすると画面の幅に合わせてしまう
+          scales: {
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              }
+            }]
+          }
+        },
+        plugins: [{
+          // 描画完了後に copyYAxisImage() を呼び出す
+          // see https://www.chartjs.org/docs/latest/developers/plugins.html
+          //     https://stackoverflow.com/questions/55416218/what-is-the-order-in-which-the-hooks-plugins-of-chart-js-are-executed
+          afterRender: copyYAxisImage
+        }]
+      });
+
+
+      
+    </script>
+
+
+  </body>
+
+</html>

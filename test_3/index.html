@@ -1,0 +1,38 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="index.css">
+    <link rel="shortcut icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width">
+    <title>Jmap jQuery Example</title>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script type="text/javascript" src="./jmap.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#jmap').jmap();
+        });
+    </script>
+</head>
+
+<body>
+    <div class="grovalNavigation">
+        <p>コロナ情報サイト</p>
+        <p>メニュー</p>
+        <p>...</p>
+    </div>
+    <div class="content">
+        <div class="map">
+            <div id="jmap"></div>
+            <div class="allnum">
+                全国の感染者数
+                <div id="total" class="total"></div>
+            </div>
+        </div>
+    </div>
+    <div class="localNavigation">
+        <p>ローカルナビゲーション</p>
+        <p>リンクとか</p>
+    </div>
+</body>
+
+</html>
